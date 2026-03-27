@@ -50,7 +50,7 @@ const DIAGNOSIS = {
     color: 'red',
 
     getText(inputs) {
-      const { conversionRate, activationRate, trials, dealSize } = inputs;
+      const { conversionRate, activationRate, trials, dealSize, salesAssistedPct } = inputs;
       const tier = acvTier(dealSize);
       const activationLine = activationRate != null
         ? `Your activation rate of ${activationRate}% means roughly ${Math.round(trials * activationRate / 100).toLocaleString()} users/month are reaching what you've defined as core value — and still not converting. Either the activation event is wrong (it doesn't represent genuine value), or the product delivers value that users don't feel is worth paying for.`
@@ -60,7 +60,10 @@ const DIAGNOSIS = {
         : tier === 'high'
         ? `At ${usd(dealSize)}/mo, a ${conversionRate}% conversion rate is hard to rescue with sales touches alone; the unit economics don't justify it at this trial volume.`
         : `At ${usd(dealSize)}/mo, sales touches can recover individual deals, but they're a workaround — not a structural fix.`;
-      return `${conversionRate}% conversion is not a funnel optimisation problem. It's a signal that most users aren't experiencing enough value during the trial to justify paying. ${activationLine} ${tierLine} Investing in acquisition or conversion tactics at this stage will cost you more than it returns — the bottleneck is upstream of both.`;
+      const salesIronyLine = salesAssistedPct != null && salesAssistedPct > 40
+        ? ` The data has a sharp edge here: ${salesAssistedPct}% of your conversions require sales involvement, yet the overall rate is still only ${conversionRate}%. Your PLG motion isn't closing deals self-serve — and your sales team is struggling to close them too. That combination rules out a funnel or pricing fix. The product itself needs to change.`
+        : '';
+      return `${conversionRate}% conversion is not a funnel optimisation problem. It's a signal that most users aren't experiencing enough value during the trial to justify paying. ${activationLine} ${tierLine}${salesIronyLine} Investing in acquisition or conversion tactics at this stage will cost you more than it returns — the bottleneck is upstream of both.`;
     },
 
     getRecommendation() {
@@ -348,15 +351,16 @@ const DIAGNOSIS = {
       const { conversionRate, trials, dealSize, activationRate, salesAssistedPct } = inputs;
       const gapCustomers = Math.round(trials * (20 - conversionRate) / 100);
       const gapMRR = usd(gapCustomers * dealSize);
+      const severity = conversionRate < 14 ? 'clearly underperforming' : conversionRate < 17 ? 'in the average range' : 'close to strong';
       const activationLine = activationRate != null
         ? activationRate < 40
           ? ` Your activation rate of ${activationRate}% is the most likely drag — users who don\'t activate rarely convert, and activation improvement typically delivers the fastest gains in this conversion range.`
           : ` Your activation rate of ${activationRate}% is healthy, which suggests the conversion gap is primarily a monetisation mechanics issue rather than a product-value problem.`
         : '';
-      const salesLine = salesAssistedPct != null && salesAssistedPct > 35
-        ? ` With ${salesAssistedPct}% sales assist, there\'s also a question of what your underlying self-serve conversion rate actually is — stripping out sales-assisted deals likely reveals a lower number than the headline ${conversionRate}% suggests.`
+      const salesMaskLine = salesAssistedPct != null && salesAssistedPct > 35
+        ? ` More importantly: with ${salesAssistedPct}% sales assist, your underlying self-serve conversion rate is approximately ${(conversionRate * (1 - salesAssistedPct / 100)).toFixed(1)}% — that\'s the number that actually tells you how your PLG motion is performing, and it\'s likely materially lower than the headline ${conversionRate}%.`
         : '';
-      return `${conversionRate}% conversion is a functional PLG motion, but the gap to 20% represents ${gapCustomers} additional customers and ${gapMRR}/mo in reachable MRR without changing a single acquisition input.${activationLine}${salesLine} At this range the answer is rarely one big fix — it\'s finding the two or three highest-cost friction points and removing them in sequence.`;
+      return `${conversionRate}% conversion is ${severity} — the gap to 20% represents ${gapCustomers} additional customers and ${gapMRR}/mo in reachable MRR without changing a single acquisition input.${activationLine}${salesMaskLine} At this range the answer is rarely one big fix — it\'s finding the two or three highest-cost friction points and removing them in sequence.`;
     },
 
     getRecommendation(inputs) {
@@ -411,13 +415,16 @@ const DIAGNOSIS = {
     color: 'indigo',
 
     getText(inputs) {
-      const { conversionRate, trials, dealSize, salesAssistedPct } = inputs;
+      const { conversionRate, trials, dealSize, salesAssistedPct, activationRate } = inputs;
       const addedAtTarget = Math.round((500 - trials) * (conversionRate / 100));
       const addedMRR = usd(addedAtTarget * dealSize);
       const salesLine = salesAssistedPct != null && salesAssistedPct > 40
         ? ` Note: with ${salesAssistedPct}% sales assist, it\'s worth confirming how much of that ${conversionRate}% is genuinely product-led before building pure self-serve acquisition — the right acquisition strategy looks different depending on which motion is actually converting.`
         : '';
-      return `${conversionRate}% conversion is strong — your product-market fit and monetisation are working. The constraint is volume: at ${trials.toLocaleString()} monthly trials, you\'re running a high-efficiency but low-throughput engine. Scaling from ${trials.toLocaleString()} to 500 trials/month at your current rate would add approximately ${addedMRR}/mo without changing anything downstream.${salesLine} The growth question has shifted from "does our funnel work?" to "how do we fill it with the right buyers, faster, without breaking conversion in the process?"`;
+      const activationAnomalyLine = activationRate != null && activationRate < T.activationWeak
+        ? ` One flag worth investigating: your activation rate of ${activationRate}% is unusually low for a ${conversionRate}% conversion rate. This typically means either your activation event is defined incorrectly (it\'s not measuring actual value attainment), or sales is compensating for a self-serve experience that wouldn\'t convert at this rate on its own. Verify the relationship holds before scaling acquisition spend.`
+        : '';
+      return `${conversionRate}% conversion is strong — your product-market fit and monetisation are working. The constraint is volume: at ${trials.toLocaleString()} monthly trials, you\'re running a high-efficiency but low-throughput engine. Scaling from ${trials.toLocaleString()} to 500 trials/month at your current rate would add approximately ${addedMRR}/mo without changing anything downstream.${salesLine}${activationAnomalyLine} The growth question has shifted from "does our funnel work?" to "how do we fill it with the right buyers, faster, without breaking conversion in the process?"`;
     },
 
     getRecommendation(inputs) {
@@ -514,6 +521,80 @@ const DIAGNOSIS = {
 };
 
 
+// ── Confidence scoring ─────────────────────────────────────────────────────────
+// Confidence reflects how much the available data supports the diagnosis.
+// High = multiple signals align and confirm. Medium = pattern fits but data is
+// incomplete or ambiguous. Low = diagnosis is an educated guess; more data needed.
+
+function computeConfidence(inputs, diagnosisId) {
+  const { conversionRate, activationRate, salesAssistedPct } = inputs;
+  const hasActivation = activationRate != null;
+  const hasSales      = salesAssistedPct != null;
+
+  switch (diagnosisId) {
+
+    case 'productValueGap':
+      if (!hasActivation)
+        return { level: 'medium', reason: 'Inferred from low conversion alone — add activation rate to distinguish a product-value gap from a severe activation bottleneck.' };
+      if (activationRate < 20 && conversionRate < 7)
+        return { level: 'high', reason: 'Both conversion and activation are critically low — the signals mutually confirm this diagnosis.' };
+      return { level: 'medium', reason: 'Very low conversion with weak activation is consistent with a product-value gap, but activation isn\'t severe enough to rule out that onboarding is the primary constraint.' };
+
+    case 'activationLeak':
+      if (conversionRate < 7 && activationRate < 30)
+        return { level: 'high', reason: 'Low activation directly explains low conversion — the constraint is clearly upstream of the monetisation decision.' };
+      return { level: 'medium', reason: 'Activation is weak but not catastrophically low — monetisation friction may also be contributing to the conversion shortfall.' };
+
+    case 'freeTooGood':
+      if (activationRate >= 65 && conversionRate < 7)
+        return { level: 'high', reason: `${activationRate}% activation with ${conversionRate}% conversion is a clean value-capture signal — users are getting what they need for free.` };
+      return { level: 'medium', reason: 'High activation with low conversion strongly suggests a value-capture problem, but other monetisation mechanics may also be contributing.' };
+
+    case 'monetisationBlock':
+      if (hasSales && salesAssistedPct > 35)
+        return { level: 'medium', reason: `${salesAssistedPct}% sales assist means your self-serve monetisation problem is likely worse than the headline conversion rate suggests — the true gap may be obscured.` };
+      if (!hasSales)
+        return { level: 'medium', reason: 'Activation and conversion data point at monetisation, but without sales-assist data it\'s impossible to rule out that some conversions are being carried by sales.' };
+      if (activationRate >= 40 && conversionRate < 8 && salesAssistedPct < 25)
+        return { level: 'high', reason: 'Good activation, low self-serve conversion, minimal sales involvement — the monetisation gap is well-evidenced and unambiguous.' };
+      return { level: 'medium', reason: 'The activation-conversion pattern fits a monetisation gap, but the data isn\'t clean enough to be fully certain.' };
+
+    case 'lowConversion':
+      return { level: 'low', reason: 'Without activation rate data, root cause cannot be determined. An activation problem and a monetisation problem look identical at the surface — and the fixes are completely different.' };
+
+    case 'salesDriven':
+      if (salesAssistedPct > 65)
+        return { level: 'high', reason: `${salesAssistedPct}% sales involvement is unambiguously a sales-led motion — the PLG framing does not reflect how revenue is actually being generated.` };
+      return { level: 'medium', reason: `${salesAssistedPct}% sales assist is high but doesn\'t fully rule out a meaningful self-serve component running alongside it.` };
+
+    case 'efficiencyGap': {
+      if (hasActivation && hasSales)
+        return { level: 'high', reason: 'Full signal set — activation and sales-assist data are both available, allowing a targeted diagnosis of where the efficiency loss is concentrated.' };
+      if (!hasActivation && !hasSales)
+        return { level: 'low', reason: 'Without activation or sales-assist data, the specific friction point can\'t be identified — the action plan will be exploratory rather than targeted.' };
+      return { level: 'medium', reason: 'Partial data — adding the missing optional metric would allow a more targeted action plan and a higher chance of identifying the right lever first.' };
+    }
+
+    case 'volumeConstrained':
+      if (hasSales && salesAssistedPct > 40)
+        return { level: 'medium', reason: `${salesAssistedPct}% sales assist means the ${conversionRate}% rate is partly sales-driven — verify your self-serve conversion rate before scaling acquisition spend.` };
+      if (hasActivation && activationRate < T.activationWeak)
+        return { level: 'medium', reason: `Strong conversion with weak activation (${activationRate}%) is unusual — it may mean sales is compensating for a product experience that won\'t scale self-serve.` };
+      return { level: 'high', reason: 'Strong conversion at low trial volume is a clean acquisition constraint — the unit economics clearly justify scaling spend.' };
+
+    case 'scaleMode':
+      if (hasSales && salesAssistedPct > 40)
+        return { level: 'medium', reason: `${salesAssistedPct}% sales assist means growth velocity is partly headcount-constrained — self-serve investment is important before aggressive scaling.` };
+      if (hasActivation && activationRate < T.activationWeak)
+        return { level: 'medium', reason: `Strong conversion with weak activation (${activationRate}%) is worth investigating — sales may be compensating for a product weakness that will surface as you scale into self-serve segments.` };
+      return { level: 'high', reason: 'Strong conversion at scale with no significant anomalies — the scale mode framing is well-supported by the data.' };
+
+    default:
+      return { level: 'medium', reason: 'Standard confidence based on available data.' };
+  }
+}
+
+
 // ── Sales flag (supplementary context, shown alongside primary diagnosis) ──────
 
 const SALES_FLAG = {
@@ -594,7 +675,8 @@ function diagnose(inputs) {
 
   // Show the sales flag as supplementary context for notable but not dominant sales assist
   const hasSalesFlag = !isSalesDriven && salesAssistedPct != null && salesAssistedPct > T.salesLeaning;
-  return { primary, hasSalesFlag };
+  const confidence = computeConfidence(inputs, primary.id);
+  return { primary, hasSalesFlag, confidence };
 }
 
 /**
@@ -613,7 +695,7 @@ function computeMissedRevenue({ trials, conversionRate, dealSize }) {
 /**
  * Build a plain-text summary for clipboard sharing.
  */
-function buildSummary(inputs, metrics, { primary, hasSalesFlag }) {
+function buildSummary(inputs, metrics, { primary, hasSalesFlag, confidence }) {
   const missed = computeMissedRevenue(inputs);
   const date = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const diagText   = primary.getText(inputs, metrics);
@@ -633,7 +715,8 @@ function buildSummary(inputs, metrics, { primary, hasSalesFlag }) {
     inputs.salesAssistedPct != null ? `Sales-Assisted         ${inputs.salesAssistedPct}%` : null,
     '',
     '── DIAGNOSIS',
-    primary.label,
+    `${primary.label}${confidence ? ` — ${confidence.level.charAt(0).toUpperCase() + confidence.level.slice(1)} Confidence` : ''}`,
+    confidence ? `(${confidence.reason})` : null,
     diagText,
     hasSalesFlag ? `\nAdditional — ${SALES_FLAG.label}\n${SALES_FLAG.getText(inputs.salesAssistedPct, inputs.dealSize)}` : null,
     '',

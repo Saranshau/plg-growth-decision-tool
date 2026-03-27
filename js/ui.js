@@ -27,6 +27,8 @@ const out = {
   // Diagnosis
   diagBadge:     document.getElementById('diag-badge'),
   diagBody:      document.getElementById('diag-body'),
+  confBadge:     document.getElementById('conf-badge'),
+  confReason:    document.getElementById('conf-reason'),
   salesFlag:     document.getElementById('sales-flag'),
   salesFlagBody: document.getElementById('sales-flag-body'),
 
@@ -121,10 +123,21 @@ function renderSnapshot(inputs, { paidUsers, mrr, conversionBand }) {
   out.fConvBand.dataset.band   = conversionBand;
 }
 
-function renderDiagnosis(inputs, metrics, { primary, hasSalesFlag }) {
+function renderDiagnosis(inputs, metrics, { primary, hasSalesFlag, confidence }) {
   out.diagBadge.textContent   = primary.label;
   out.diagBadge.dataset.color = primary.color;
   out.diagBody.textContent    = primary.getText(inputs, metrics);
+
+  if (confidence) {
+    out.confBadge.textContent        = cap(confidence.level) + ' Confidence';
+    out.confBadge.dataset.level      = confidence.level;
+    out.confBadge.hidden             = false;
+    out.confReason.textContent       = confidence.reason;
+    out.confReason.hidden            = false;
+  } else {
+    out.confBadge.hidden  = true;
+    out.confReason.hidden = true;
+  }
 
   if (hasSalesFlag) {
     out.salesFlagBody.textContent = SALES_FLAG.getText(inputs.salesAssistedPct, inputs.dealSize);
