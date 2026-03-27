@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PLG Growth Decision Tool</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div>
+        <p class="header-eyebrow">Product-Led Growth</p>
+        <h1 class="header-title">Growth Decision Tool</h1>
+      </div>
+      <p class="header-sub">Enter your funnel data. Get an opinionated diagnosis and clear next priorities.</p>
+    </div>
+  </header>
+
+  <div class="app-layout">
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         LEFT — Input panel
+    ───────────────────────────────────────────────────────────────────────── -->
+    <aside class="input-panel">
+
+      <p class="panel-title">Your Metrics</p>
+
+      <div class="fields">
+
+        <!-- Required -->
+        <div class="field">
+          <label for="trials">
+            Monthly Trials
+            <span class="tag tag--required">Required</span>
+          </label>
+          <input type="number" id="trials" min="0" step="1" placeholder="500">
+          <p class="field-hint">New trial signups in the last 30 days</p>
+        </div>
+
+        <div class="field">
+          <label for="conversionRate">
+            Trial → Paid Conversion
+            <span class="tag tag--required">Required</span>
+          </label>
+          <div class="input-wrap">
+            <input type="number" id="conversionRate" min="0" max="100" step="0.1" placeholder="12">
+            <span class="input-affix">%</span>
+          </div>
+          <p class="field-hint">% of trials that convert to paid</p>
+        </div>
+
+        <div class="field">
+          <label for="dealSize">
+            Avg. Deal Size
+            <span class="tag tag--required">Required</span>
+          </label>
+          <div class="input-wrap input-wrap--prefix">
+            <span class="input-affix input-affix--prefix">$</span>
+            <input type="number" id="dealSize" min="0" step="1" placeholder="100">
+          </div>
+          <p class="field-hint">Monthly revenue per paying customer</p>
+        </div>
+
+        <div class="field-divider"></div>
+
+        <!-- Optional -->
+        <div class="field">
+          <label for="activationRate">
+            Activation Rate
+            <span class="tag tag--optional">Optional</span>
+          </label>
+          <div class="input-wrap">
+            <input type="number" id="activationRate" min="0" max="100" step="0.1" placeholder="35">
+            <span class="input-affix">%</span>
+          </div>
+          <p class="field-hint">% of trials who reach your core value moment</p>
+        </div>
+
+        <div class="field">
+          <label for="salesAssistedPct">
+            Sales-Assisted %
+            <span class="tag tag--optional">Optional</span>
+          </label>
+          <div class="input-wrap">
+            <input type="number" id="salesAssistedPct" min="0" max="100" step="0.1" placeholder="25">
+            <span class="input-affix">%</span>
+          </div>
+          <p class="field-hint">% of conversions that needed sales involvement</p>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         RIGHT — Results panel
+    ───────────────────────────────────────────────────────────────────────── -->
+    <main class="results-panel">
+
+      <!-- Empty state -->
+      <div class="empty-state" id="empty-state">
+        <p class="empty-arrow">←</p>
+        <p class="empty-title">Enter your three required metrics to begin</p>
+        <p class="empty-sub">Monthly Trials, Conversion Rate, and Deal Size will generate your personalised funnel diagnosis.</p>
+      </div>
+
+      <!-- Results (shown once required fields are filled) -->
+      <div id="results" hidden>
+
+        <!-- 1 · Funnel Snapshot -->
+        <section class="result-card">
+          <h2 class="card-label">Funnel Snapshot</h2>
+          <div class="funnel-row">
+            <div class="funnel-stat">
+              <span class="stat-val" id="f-trials">—</span>
+              <span class="stat-key">Monthly Trials</span>
+            </div>
+            <div class="funnel-connector">
+              <span class="conv-badge" id="f-conv-badge">—%</span>
+              <span class="conv-band" id="f-conv-band">—</span>
+            </div>
+            <div class="funnel-stat">
+              <span class="stat-val" id="f-paid">—</span>
+              <span class="stat-key">Paid / mo</span>
+            </div>
+            <div class="funnel-arrow">→</div>
+            <div class="funnel-stat">
+              <span class="stat-val stat-val--rev" id="f-mrr">—</span>
+              <span class="stat-key">Est. MRR</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2 · Diagnosis -->
+        <section class="result-card">
+          <h2 class="card-label">Diagnosis</h2>
+          <span class="diag-badge" id="diag-badge">—</span>
+          <p class="diag-body" id="diag-body">—</p>
+          <div class="sales-flag" id="sales-flag" hidden>
+            <p class="sales-flag-label">Additional Flag — Sales-Assist Reliance</p>
+            <p class="sales-flag-body" id="sales-flag-body">—</p>
+          </div>
+        </section>
+
+        <!-- 3 · Primary Recommendation -->
+        <section class="result-card result-card--dark">
+          <h2 class="card-label card-label--dim">Primary Recommendation</h2>
+          <p class="rec-body" id="rec-body">—</p>
+        </section>
+
+        <!-- 4 · Action Plan -->
+        <section class="result-card">
+          <h2 class="card-label">Action Plan</h2>
+          <ol class="action-list" id="action-list"></ol>
+        </section>
+
+        <!-- 5 · Missed Revenue -->
+        <section class="result-card">
+          <h2 class="card-label">Missed Revenue Opportunity</h2>
+          <p class="revenue-intro">If conversion improves by a few percentage points:</p>
+          <div class="revenue-grid">
+            <div class="revenue-scenario">
+              <p class="scenario-delta">+5% conversion</p>
+              <p class="scenario-mrr" id="r5-mrr">+$0/mo</p>
+              <p class="scenario-cust" id="r5-cust">+0 customers/mo</p>
+            </div>
+            <div class="revenue-scenario">
+              <p class="scenario-delta">+10% conversion</p>
+              <p class="scenario-mrr" id="r10-mrr">+$0/mo</p>
+              <p class="scenario-cust" id="r10-cust">+0 customers/mo</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Copy summary -->
+        <div class="copy-row">
+          <button class="btn-copy" id="btn-copy">Copy Summary</button>
+          <span class="copy-confirm" id="copy-confirm" hidden aria-live="polite">Copied to clipboard</span>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <script src="js/logic.js" defer></script>
+  <script src="js/ui.js" defer></script>
+</body>
+</html>
