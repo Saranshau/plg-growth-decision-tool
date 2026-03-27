@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(node --check /Users/saranshsharma/my-first-project/plg-decision-tool/js/logic.js)",
+      "Bash(~/.nvm/versions/node/*/bin/node)",
+      "Bash(--check /Users/saranshsharma/my-first-project/plg-decision-tool/js/logic.js)",
+      "Bash(/opt/homebrew/bin/node --check /Users/saranshsharma/my-first-project/plg-decision-tool/js/logic.js)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
