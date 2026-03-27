@@ -53,21 +53,22 @@ const DIAGNOSIS = {
       const { conversionRate, activationRate, trials, dealSize, salesAssistedPct } = inputs;
       const tier = acvTier(dealSize);
       const activationLine = activationRate != null
-        ? `Your activation rate of ${activationRate}% means roughly ${Math.round(trials * activationRate / 100).toLocaleString()} users/month are reaching what you've defined as core value — and still not converting. This means either the activation event is defined wrong and doesn't represent genuine value attainment, or the product delivers something users don't feel is worth paying for.`
-        : `Without activation data it's hard to be exact, but at ${conversionRate}% conversion across ${trials.toLocaleString()} trials, the trial window almost certainly isn't delivering a compelling enough value moment for most users.`;
+        ? `${activationRate}% activation means ${Math.round(trials * activationRate / 100).toLocaleString()} users/month are reaching what you've defined as your core value moment — and still not paying. Either the activation event is wrong (not a genuine value signal), or the product delivers something users don't feel is worth paying for.`
+        : `${(100 - conversionRate).toFixed(0)}% of ${trials.toLocaleString()} trials are not converting, and without activation data you can't isolate where they're exiting. Add activation rate — it's the single number that determines your fix.`;
       const whyLine = tier === 'low'
-        ? `At ${usd(dealSize)}/mo, the underlying cause is almost always the same: the trial doesn't reach a moment that feels meaningfully better than the alternative. Either it takes too long to get there, or the moment itself isn't compelling enough. There's no ACV headroom to compensate with sales economics.`
+        ? `At ${usd(dealSize)}/mo, there is no ACV headroom to compensate with sales. The product needs to create and close its own demand at volume — and right now it isn't.`
         : tier === 'high'
-        ? `At ${usd(dealSize)}/mo, users need to feel the ROI acutely before they can justify the spend internally. The trial is most likely showing them what the product does, not what it achieves for them — and there's no commercially legible outcome to take to a budget conversation.`
-        : `At ${usd(dealSize)}/mo, hesitation almost always points at felt value, not price sensitivity. Either users aren't reaching the right moment, or they reach it and aren't sufficiently compelled.`;
+        ? `At ${usd(dealSize)}/mo, users need a commercially legible ROI outcome they can take to a stakeholder. The trial is showing them features. It needs to show them business results.`
+        : `At ${usd(dealSize)}/mo, price sensitivity is not the problem. Users who experience genuine value at this price point pay. The felt value isn't landing.`;
       const salesIronyLine = salesAssistedPct != null && salesAssistedPct > 40
-        ? ` One sharp data point: ${salesAssistedPct}% of your conversions require sales involvement, and the overall rate is still only ${conversionRate}%. Sales is actively working to close these deals and not consistently succeeding. That combination tells you the gap is significant enough that neither self-serve mechanics nor direct sales conversations are overcoming it reliably.`
+        ? ` The sharpest signal in your data: ${salesAssistedPct}% of conversions require direct sales involvement, and the overall rate is still only ${conversionRate}%. Sales is personally working these deals and failing to close most of them. That eliminates funnel, pricing, and onboarding fixes as primary levers — the product isn't delivering enough value for any motion to work.`
         : '';
-      return `${conversionRate}% conversion is not a funnel problem — it's a signal that most users aren't experiencing enough value during the trial to justify paying. Every downstream lever (better emails, CRO experiments, pricing changes) treats symptoms of a root cause they can't fix. You're not losing users at the upgrade decision; you're losing them before they care about upgrading. ${activationLine} ${whyLine}${salesIronyLine}`;
+      return `${conversionRate}% conversion is not a funnel problem. It is a signal that most users are not experiencing enough value in the trial to justify paying. Every downstream fix — emails, CRO tests, pricing adjustments — treats symptoms of a root cause they cannot resolve. You are not losing users at the upgrade decision. You are losing them before they care about upgrading. ${activationLine} ${whyLine}${salesIronyLine}`;
     },
 
-    getRecommendation() {
-      return 'Establish genuine product-market fit within the trial window before touching any other lever. What to avoid: investing in acquisition, conversion rate experiments, or pricing changes at this conversion rate. Every trial you add is largely wasted spend until users can reliably experience the value.';
+    getRecommendation(inputs) {
+      const { conversionRate } = inputs;
+      return `Focus entirely on the product-market fit gap within the trial window. Nothing else moves the needle at ${conversionRate}% conversion. Do not invest in acquisition, CRO, or pricing changes yet — every trial you add is wasted spend until users can reliably experience the value. Run JTBD research with paying customers this week. All other work is downstream of what you learn there.`;
     },
 
     getActions(inputs) {
@@ -105,11 +106,13 @@ const DIAGNOSIS = {
       const potentialNewCust = Math.round(activatedUsers * 0.30);
       const potentialMRR = usd(potentialNewCust * dealSize);
       const nonActivating = (trials - activatedUsers).toLocaleString();
-      return `Your activation rate of ${activationRate}% is the headline constraint — only ${activatedUsers.toLocaleString()} of your ${trials.toLocaleString()} monthly trials are reaching core value. Your ${conversionRate}% overall conversion rate is a downstream symptom of that upstream leak: you're measuring the output of a funnel where ${nonActivating} users/month exit before experiencing what they'd be paying for. What this means: you're not losing users at the pricing decision — you're losing them before they care about pricing. Even at a conservative 30% conversion rate among activated users, closing that activation gap could add ~${potentialMRR}/mo without changing a single acquisition input. Why this is happening: at ${activationRate}%, the most common root cause is distance to value. Users hit setup steps, configuration requirements, or friction before they reach the value moment — and disengage before getting there. The problem is rarely the value itself; it's the path between signup and experiencing it.`;
+      return `${activationRate}% activation means ${nonActivating} of your ${trials.toLocaleString()} monthly trials exit before experiencing what they'd be paying for. Your ${conversionRate}% overall conversion rate is a downstream number — the real problem is upstream. So what: at a conservative 30% conversion among activated users, closing this gap adds ~${potentialMRR}/mo without touching acquisition, pricing, or your product's core value. Why: at ${activationRate}%, the bottleneck is distance to value. Users hit setup steps, configuration requirements, or friction before they reach the value moment — and disengage before getting there. The problem is almost never the value itself. It's the path between signup and experiencing it.`;
     },
 
-    getRecommendation() {
-      return 'Every point of activation improvement compounds directly into conversion — this is the single highest-leverage fix in your funnel right now. What to avoid: running paid acquisition campaigns or top-of-funnel spend to compensate for low conversion. Adding more trials to this funnel fills a leaky bucket. Fix the leak first.';
+    getRecommendation(inputs) {
+      const { trials, activationRate } = inputs;
+      const nonActivating = Math.round(trials * (1 - activationRate / 100));
+      return `Focus all product effort on activation improvement — this is your highest-leverage fix and it compounds directly into conversion. Do not increase acquisition spend or run paid campaigns at ${activationRate}% activation. You are adding ${nonActivating.toLocaleString()} wasted trials per month to a funnel with a known upstream leak. Close the leak first, then scale volume.`;
     },
 
     getActions(inputs) {
@@ -146,18 +149,20 @@ const DIAGNOSIS = {
     getText(inputs) {
       const { conversionRate, activationRate, trials, dealSize } = inputs;
       const tier = acvTier(dealSize);
+      const notPaying = Math.round(trials * activationRate / 100 * (1 - conversionRate / 100));
       const tierLine = tier === 'low'
-        ? `At ${usd(dealSize)}/mo, the upgrade decision should be near-frictionless for a user who's already experienced the product's value. If only ${conversionRate}% are converting, the free tier isn't creating a ceiling that makes paid feel necessary — users are getting enough without upgrading.`
-        : `At ${usd(dealSize)}/mo, an activated user should be in active evaluation of the upgrade. The fact that ${(100 - conversionRate).toFixed(0)}% aren't converting suggests the free product is delivering the primary outcome without a compelling reason to go further.`;
-      return `An activation rate of ${activationRate}% with a ${conversionRate}% conversion rate is an unusual and expensive combination. ${activationRate}% of your users are experiencing genuine product value — and only ${conversionRate}% are paying for it. What this means: this isn\'t an onboarding problem, a marketing problem, or a pricing problem. The free product is doing the job that paid should do. Why this is happening: the free/paid boundary is in the wrong place. Either you\'re not gating features that carry genuine commercial value, or the ceiling that should create natural upgrade pressure doesn\'t exist. ${tierLine} The question isn\'t how to get more users to value — it\'s what you\'re giving away that removes the reason to pay.`;
+        ? `At ${usd(dealSize)}/mo, the upgrade decision should be near-instant for a user who's experienced the value. If ${(100 - conversionRate).toFixed(0)}% aren't converting, the free tier has no ceiling that makes paid feel necessary.`
+        : `At ${usd(dealSize)}/mo, an activated user should be evaluating the upgrade seriously. ${(100 - conversionRate).toFixed(0)}% are not — which means the free product is delivering the primary outcome without a compelling reason to go further.`;
+      return `${activationRate}% activation and ${conversionRate}% conversion is an expensive combination. Roughly ${notPaying.toLocaleString()} users/month experience genuine product value and choose not to pay for it. So what: this is not an onboarding problem, a marketing problem, or a pricing problem. The free product is doing the job that paid should do. ${tierLine} Why: the free/paid boundary is in the wrong place — you are not gating features with genuine commercial value, or the ceiling that creates upgrade pressure does not exist. Non-obvious: your ${notPaying.toLocaleString()} activated non-converters are your most valuable research cohort. They have validated the product. Ask them what they'd pay for — their answers locate your boundary problem faster than any A/B test.`;
     },
 
     getRecommendation(inputs) {
-      const tier = acvTier(inputs.dealSize);
+      const { conversionRate, activationRate, dealSize } = inputs;
+      const tier = acvTier(dealSize);
       if (tier === 'low') {
-        return 'Redesign your free/paid boundary to create genuine upgrade pressure at a moment that matters to users. What to avoid: lowering your price. Users aren\'t failing to convert because it\'s too expensive — they\'re not converting because they don\'t need to. A discount doesn\'t fix a boundary problem.';
+        return `Redesign the free/paid boundary — your free tier removes the primary reason to upgrade. Do not lower your price. Users are not hesitating because ${usd(dealSize)}/mo is too expensive; they are not upgrading because they do not need to. A discount makes a boundary problem worse. Interview ${Math.min(10, 5)} activated non-converters this week to find where the boundary should move.`;
       }
-      return 'Audit what you\'re giving away for free — the gap between activation and conversion points directly at your free tier removing the primary reason to upgrade. What to avoid: adding more features to the paid tier before fixing the free tier boundary. More paid features won\'t move conversion if users are already satisfied without paying.';
+      return `Audit what you are giving away for free and move the boundary. The ${activationRate}% vs ${conversionRate}% gap is a direct readout of your free tier removing the primary reason to pay. Do not add more paid features before fixing this — more paid features will not move conversion if activated users are already satisfied without paying.`;
     },
 
     getActions(inputs) {
@@ -194,23 +199,25 @@ const DIAGNOSIS = {
       const { conversionRate, activationRate, trials, dealSize, salesAssistedPct } = inputs;
       const activatedUsers = Math.round(trials * activationRate / 100);
       const tier = acvTier(dealSize);
+      const notConverting = activatedUsers - Math.round(trials * conversionRate / 100);
       const salesLine = salesAssistedPct != null && salesAssistedPct > 30
-        ? ` The fact that ${salesAssistedPct}% of your conversions require sales involvement reinforces this: self-serve upgrade mechanics aren\'t working well enough on their own, so users need a conversation before they\'ll pay.`
+        ? ` ${salesAssistedPct}% of conversions require sales involvement — which means self-serve upgrade mechanics are not working on their own.`
         : '';
       const whyLine = tier === 'low'
-        ? `At ${usd(dealSize)}/mo, the upgrade decision should be near-instant for an activated user. The most common causes: the upgrade CTA appears too late (after trial expiry rather than at peak value), or the path from activation to paid has unnecessary friction — a pricing page that requires a demo request, a checkout flow that breaks trust, or an email sequence that doesn\'t reference what the user actually did.`
+        ? `At ${usd(dealSize)}/mo, the upgrade decision should be near-instant for an activated user. The most common failure: the upgrade CTA appears at trial expiry rather than at peak engagement, or the path from activation to checkout has unnecessary friction. Non-obvious: most products don't know when activated users first see an upgrade prompt — pull that number before running any other experiment.`
         : tier === 'high'
-        ? `At ${usd(dealSize)}/mo, users almost certainly need to justify the spend to a stakeholder. The conversion block is likely about ROI articulation and internal sell — not a better CTA. The person who activates often isn\'t the person who signs the contract.`
-        : `At ${usd(dealSize)}/mo, users are doing a conscious cost-benefit evaluation. The most common root cause is that the upgrade moment is timed wrong — at trial expiry rather than at the point where users feel the value most acutely.`;
-      return `${activationRate}% of your trial users are reaching core value — that\'s ${activatedUsers.toLocaleString()} users/month who understand what your product does. But only ${conversionRate}% are converting to paid.${salesLine} What this means: the product is working at the engagement level, but the revenue architecture downstream isn\'t. Activated users are disengaging from the buying process, not the product. Why this is happening: ${whyLine}`;
+        ? `At ${usd(dealSize)}/mo, the person who activates is rarely the person who approves the spend. The conversion block is ROI articulation and internal sell — not a better CTA. Users need a business case, not a pricing page.`
+        : `At ${usd(dealSize)}/mo, users are making a conscious cost-benefit decision. The upgrade moment is almost certainly timed wrong — appearing at trial expiry instead of at the point where users feel the value most acutely.`;
+      return `${activationRate}% of trial users are reaching core value — ${activatedUsers.toLocaleString()} users/month who understand what your product does. Only ${conversionRate}% are paying for it.${salesLine} So what: ${notConverting.toLocaleString()} activated users per month are disengaging from the buying process, not the product. Product-market fit is working. The revenue architecture downstream of it is not. Why: ${whyLine}`;
     },
 
     getRecommendation(inputs) {
-      const tier = acvTier(inputs.dealSize);
+      const { dealSize } = inputs;
+      const tier = acvTier(dealSize);
       if (tier === 'high') {
-        return 'Build a clear ROI narrative and upgrade pathway for activated users — at your ACV, conversion requires business justification that users can take to stakeholders. What to avoid: rebuilding your pricing model or changing your plan structure. Activated users want to pay — they need a clearer outcome, better timing, or an easier path to doing so internally.';
+        return `Build the ROI narrative and the upgrade pathway before anything else — at ${usd(dealSize)}/mo, conversion requires a business justification users can take to a budget owner. Do not run CRO experiments on your pricing page before building this. You are optimising a step that is not the bottleneck.`;
       }
-      return 'Fix the timing and mechanics of your in-product upgrade path — activated users aren\'t converting because the commercial pathway that should follow product engagement is broken or absent. What to avoid: A/B testing pricing page copy before fixing when and where the upgrade CTA actually appears. Copy optimisation on a badly timed CTA moves nothing.';
+      return `Fix when and where activated users first see an upgrade prompt — move it to immediately after the activation event, not at trial expiry. Do not A/B test pricing page copy before you know this timing. Copy optimisation on a badly timed CTA will not move conversion.`;
     },
 
     getActions(inputs) {
@@ -251,11 +258,13 @@ const DIAGNOSIS = {
       const { conversionRate, trials, dealSize } = inputs;
       const currentMRR = usd(Math.round(trials * conversionRate / 100) * dealSize);
       const mrrAt20 = usd(Math.round(trials * 0.20) * dealSize);
-      return `${conversionRate}% conversion means ${(100 - conversionRate).toFixed(0)}% of your trial users don\'t become paying customers. At ${trials.toLocaleString()} monthly trials, the gap between your current ${currentMRR}/mo and what a 20% conversion rate would generate (${mrrAt20}/mo) is the cost of not knowing which problem you\'re solving. What this means: you have a conversion rate problem, but you don\'t yet know why — and the two most common root causes require completely different fixes. An activation problem (users not reaching value) and a monetisation problem (users reaching value but not upgrading) look identical at the conversion rate level. Why this matters now: the most common mistake is running conversion experiments — pricing page tests, upgrade email tweaks, CTA changes — before establishing which root cause you\'re treating. You\'ll spend a quarter optimising the wrong thing.`;
+      const gap = usd(Math.round(trials * 0.20) * dealSize - Math.round(trials * conversionRate / 100) * dealSize);
+      return `${conversionRate}% conversion means ${(100 - conversionRate).toFixed(0)}% of ${trials.toLocaleString()} monthly trials are not becoming customers. The gap between your current ${currentMRR}/mo and a 20% conversion rate (${mrrAt20}/mo) is ${gap}/mo of revenue you can't capture until you know which problem you're solving. So what: an activation problem and a monetisation problem look identical at the conversion rate level — but the fixes are completely different. Investing in the wrong one costs you a quarter. Why this is the priority now: the tempting moves — pricing page tests, CTA changes, upgrade email tweaks — are all guesses about root cause. You don't need experiments yet. You need a diagnosis.`;
     },
 
-    getRecommendation() {
-      return 'Spend one week diagnosing whether this is an activation problem or a monetisation problem before touching any specific lever — the interventions are completely different. What to avoid: A/B testing your pricing page, upgrade flows, or trial emails before you know the root cause. Inconclusive experiments at this stage are expensive distractions.';
+    getRecommendation(inputs) {
+      const { trials } = inputs;
+      return `Add your activation rate — it is the single number that tells you whether to fix onboarding or upgrade mechanics. Do not run any conversion experiments until you have it. This is a one-week instrumentation task. Running tests without knowing root cause is how teams spend 90 days optimising the wrong variable and then can't explain flat results to leadership.`;
     },
 
     getActions() {
@@ -293,22 +302,23 @@ const DIAGNOSIS = {
       const selfServeRate = +(conversionRate * (1 - salesAssistedPct / 100)).toFixed(1);
       const selfServePaid = Math.round(trials * selfServeRate / 100);
       const unitEconomicsLine = tier === 'low'
-        ? `At ${usd(dealSize)}/mo average deal, a fully-loaded sales touch — rep time, tooling, management overhead — likely costs more than the first-year gross margin on many of these deals. This is a unit economics problem, not just a scale problem.`
+        ? `At ${usd(dealSize)}/mo, a fully-loaded sales touch — rep time, tooling, management overhead — costs more than the first-year gross margin on most of these deals. This is a unit economics problem, not a scale problem.`
         : tier === 'high'
-        ? `At ${usd(dealSize)}/mo, sales involvement is commercially justifiable on individual deals. But growth velocity is headcount-constrained — every increment of new revenue requires a proportional increment of sales capacity.`
-        : `At ${usd(dealSize)}/mo, you have enough ACV headroom that individual sales touches can be justified. But it caps growth velocity: revenue scales with your sales team, not with your product adoption.`;
-      return `${salesAssistedPct}% of your conversions require sales involvement. Strip that out, and your true self-serve conversion rate is approximately ${selfServeRate}% — generating roughly ${selfServePaid.toLocaleString()} customers per month without any sales input. What this means: your PLG motion is functioning as a top-of-funnel lead source for your sales team, not as a self-sufficient revenue engine. PLG-as-lead-gen scales with headcount. PLG-as-revenue-engine scales with product. ${unitEconomicsLine} Why this is happening: self-serve conversion mechanics almost certainly haven\'t been built, because sales has been compensating for their absence. The product debt accumulates silently — every quarter you delay building a genuine self-serve path, the gap compounds.`;
+        ? `At ${usd(dealSize)}/mo, individual sales touches are commercially justifiable. But growth velocity is headcount-constrained — every increment of new revenue requires a proportional increment of sales capacity.`
+        : `At ${usd(dealSize)}/mo, individual sales touches can be justified on margin. But it means revenue scales with your sales team size, not with your product adoption.`;
+      return `Your reported conversion rate is ${conversionRate}%. Strip out the ${salesAssistedPct}% of deals that required sales involvement and your true self-serve conversion rate is ${selfServeRate}% — ${selfServePaid.toLocaleString()} customers/month without any sales input. So what: your PLG motion is a lead source for sales, not a self-sufficient revenue engine. PLG-as-lead-gen scales with headcount. PLG-as-revenue-engine scales with product. ${unitEconomicsLine} Why: self-serve conversion mechanics haven't been built because sales has been compensating for their absence. Every quarter this continues, the gap between your current state and a real PLG motion widens — and the product debt compounds silently.`;
     },
 
     getRecommendation(inputs) {
-      const tier = acvTier(inputs.dealSize);
+      const { dealSize, salesAssistedPct } = inputs;
+      const tier = acvTier(dealSize);
       if (tier === 'low') {
-        return 'Rebuild self-serve conversion mechanics urgently — at your ACV, sales-assisted conversion is economically unsustainable and is masking a product gap. What to avoid: scaling your sales team further before fixing self-serve. You\'ll increase headcount costs and compress margins without addressing the underlying capability gap.';
+        return `Rebuild self-serve conversion mechanics now — at ${usd(dealSize)}/mo, sales-assisted conversion is economically unsustainable and is masking a product gap. Do not scale your sales team further before fixing self-serve. You will increase headcount costs and compress margins without closing the underlying capability gap.`;
       }
       if (tier === 'high') {
-        return 'Build a parallel self-serve conversion path alongside your existing sales motion — enterprise deals may justify sales, but you need a product-led path to unlock non-linear growth. What to avoid: treating this exclusively as a sales efficiency problem. The goal isn\'t to make sales cheaper — it\'s to build a conversion path that can operate independently of your sales team.';
+        return `Build a parallel self-serve path alongside your sales motion — you need both. Do not treat this exclusively as a sales efficiency problem. The goal is not to make sales cheaper. It is to build a conversion path that operates independently of your sales team's capacity.`;
       }
-      return 'Identify the top 3 reasons sales is being called in and build product or content fixes for each — every reduction in sales-assist % is a direct improvement to growth efficiency and margin. What to avoid: adding sales headcount as your primary growth investment. Revenue will scale, but so will costs, and the self-serve gap compounds.';
+      return `Identify the top 3 reasons sales is being called in and build product fixes for each. Do not add sales headcount as your primary growth investment — revenue will scale, but so will costs, and your ${salesAssistedPct}% dependency will be harder to unwind the longer you wait.`;
     },
 
     getActions(inputs) {
@@ -352,24 +362,24 @@ const DIAGNOSIS = {
       const { conversionRate, trials, dealSize, activationRate, salesAssistedPct } = inputs;
       const gapCustomers = Math.round(trials * (20 - conversionRate) / 100);
       const gapMRR = usd(gapCustomers * dealSize);
-      const severity = conversionRate < 14 ? 'clearly underperforming' : conversionRate < 17 ? 'in the average range' : 'close to strong, but not there yet';
+      const severity = conversionRate < 14 ? 'clearly underperforming' : conversionRate < 17 ? 'average' : 'approaching strong but not there yet';
       const activationLine = activationRate != null
         ? activationRate < 40
-          ? ` Your activation rate of ${activationRate}% is the most likely drag — users who don\'t activate rarely convert, and activation improvement typically delivers the fastest, most durable gains in this conversion range.`
-          : ` Your activation rate of ${activationRate}% is healthy, which means the conversion shortfall is primarily a monetisation mechanics issue — the value is landing, but the commercial pathway that should follow it isn\'t firing reliably.`
-        : ' Without activation data, it\'s hard to know whether the friction is pre- or post-value moment — that distinction determines whether you fix onboarding or upgrade mechanics first.';
+          ? ` Your activation rate of ${activationRate}% is the primary drag — users who don't activate don't convert, and activation improvement delivers the fastest, most durable gains at this conversion level.`
+          : ` Your activation rate of ${activationRate}% is healthy. The conversion shortfall is a monetisation mechanics issue — the value is landing, but the commercial pathway that should follow it isn't firing.`
+        : ` Without activation data, you can't tell whether the friction is pre- or post-value moment — and that distinction determines your entire fix. Add activation rate before running any experiments.`;
       const salesMaskLine = salesAssistedPct != null && salesAssistedPct > 35
-        ? ` Critical context on your true position: with ${salesAssistedPct}% sales assist, your underlying self-serve conversion rate is approximately ${(conversionRate * (1 - salesAssistedPct / 100)).toFixed(1)}%. That\'s the number that tells you how your PLG motion is actually performing — and it\'s likely materially lower than the headline ${conversionRate}% suggests.`
+        ? ` Critical: with ${salesAssistedPct}% sales assist, your true self-serve conversion rate is approximately ${(conversionRate * (1 - salesAssistedPct / 100)).toFixed(1)}%. That is the number that tells you how your PLG motion is actually performing — and it is materially lower than the ${conversionRate}% headline figure.`
         : '';
-      return `${conversionRate}% conversion is ${severity}. The gap to 20% represents ${gapCustomers} additional customers and ${gapMRR}/mo in reachable MRR — without changing a single acquisition input.${activationLine}${salesMaskLine} What this means: you have a functional conversion engine with identifiable, fixable friction. The answer is rarely one big change — it\'s finding the two or three highest-cost friction points and removing them in sequence, which is exactly the kind of systematic work that compounds.`;
+      return `${conversionRate}% conversion is ${severity}. ${gapCustomers} additional customers and ${gapMRR}/mo is reachable without changing a single acquisition input.${activationLine}${salesMaskLine} So what: you have a working conversion engine with specific, identifiable friction. This is not a strategic problem — it is a prioritisation and sequencing problem. Find the two or three highest-cost friction points and remove them in order.`;
     },
 
     getRecommendation(inputs) {
-      const { activationRate } = inputs;
+      const { activationRate, conversionRate } = inputs;
       if (activationRate != null && activationRate < 40) {
-        return `Lift activation before running conversion experiments — at ${activationRate}% you\'re losing potential conversions before users reach the monetisation decision, and experiments downstream won\'t show clean signal. What to avoid: a wholesale pricing or packaging redesign. At this conversion range, the most common mistake is treating it as a pricing problem when it\'s almost always a friction or timing problem.`;
+        return `Fix activation before running any conversion experiments — at ${activationRate}% you are losing potential conversions before users reach the monetisation decision, and downstream experiments will produce noise, not signal. Do not run a pricing redesign or packaging overhaul. At ${conversionRate}% conversion, the problem is friction and timing — not price.`;
       }
-      return 'Run structured conversion experiments — one hypothesis per trial cycle, starting with the trial-end experience, which is almost always the highest-leverage point. What to avoid: running multiple experiments simultaneously. You\'ll get noise, not signal, and waste 2–3 trial cycles before you can act on anything.';
+      return `Run one structured conversion experiment per trial cycle, starting with the trial-end experience. Do not run multiple experiments simultaneously — you will get noise, not signal, and waste 2–3 trial cycles before you can act on anything. The trial-end window is almost always the highest-return place to start.`;
     },
 
     getActions(inputs) {
@@ -421,20 +431,20 @@ const DIAGNOSIS = {
       const addedAtTarget = Math.round((500 - trials) * (conversionRate / 100));
       const addedMRR = usd(addedAtTarget * dealSize);
       const salesLine = salesAssistedPct != null && salesAssistedPct > 40
-        ? ` One caveat: with ${salesAssistedPct}% sales assist, confirm how much of that ${conversionRate}% is genuinely product-led before investing in pure self-serve acquisition. The right acquisition strategy looks different depending on which motion is actually driving conversion.`
+        ? ` Important caveat: ${salesAssistedPct}% sales assist means a significant share of that ${conversionRate}% is sales-driven, not product-led. Confirm your true self-serve conversion rate before building a pure self-serve acquisition strategy — the channel mix depends on which motion is actually converting.`
         : '';
       const activationAnomalyLine = activationRate != null && activationRate < T.activationWeak
-        ? ` One flag worth verifying: your activation rate of ${activationRate}% is unusually low for a ${conversionRate}% conversion rate. This typically means either your activation event is defined incorrectly (not measuring actual value attainment), or sales is compensating for a product experience that wouldn\'t hold at this conversion rate self-serve. Verify this holds before scaling acquisition spend — or you\'ll find out at scale.`
+        ? ` Non-obvious flag: your activation rate of ${activationRate}% is unusually low for a ${conversionRate}% conversion rate. This pattern usually means one of two things: your activation event is defined incorrectly and isn't measuring real value attainment, or sales is compensating for a product experience that wouldn't hold self-serve. Verify before scaling spend — you will find out at scale if it's the latter.`
         : '';
-      return `${conversionRate}% conversion is strong — your product-market fit and monetisation are working. The constraint is volume: at ${trials.toLocaleString()} monthly trials, you\'re running a high-efficiency, low-throughput engine. What this means: the growth question has shifted from "does our funnel work?" to "how do we fill it with the right buyers faster?" Scaling from ${trials.toLocaleString()} to 500 trials/month at your current rate would add approximately ${addedMRR}/mo without changing anything downstream. Why you\'re here: most companies at this stage under-invested in acquisition while perfecting the conversion funnel. The funnel is ready. The pipe isn\'t.${salesLine}${activationAnomalyLine}`;
+      return `${conversionRate}% conversion is strong. Your product-market fit and monetisation engine are working. The constraint is volume. At ${trials.toLocaleString()} monthly trials, you are running a high-efficiency, low-throughput funnel. Scaling to 500 trials/month at your current rate adds approximately ${addedMRR}/mo without changing anything downstream. So what: the growth question has moved from "does our funnel work?" to "how do we fill it faster?" The funnel is ready. The pipe isn't.${salesLine}${activationAnomalyLine}`;
     },
 
     getRecommendation(inputs) {
-      const { salesAssistedPct } = inputs;
+      const { salesAssistedPct, conversionRate } = inputs;
       if (salesAssistedPct != null && salesAssistedPct > 40) {
-        return 'Scale acquisition — but build self-serve acquisition channels in parallel with sales-assisted ones, or you\'ll hit a headcount ceiling before you hit a revenue one. What to avoid: pouring acquisition budget into channels that primarily generate leads for your sales team without also building channels that convert self-serve.';
+        return `Scale acquisition — but build self-serve channels in parallel with sales-assisted ones. Do not pour budget into channels that primarily generate sales leads without also building self-serve conversion paths. You will hit a headcount ceiling before a revenue ceiling.`;
       }
-      return 'Invest aggressively in top-of-funnel — your unit economics clearly justify scaling spend, and your conversion engine can absorb significantly more volume. What to avoid: spending more time optimising conversion rate. At 20%+, the marginal return on conversion improvement is small. The growth multiplier is volume, not efficiency.';
+      return `Invest aggressively in top-of-funnel now — your unit economics justify it and your conversion engine can absorb significantly more volume. Do not spend more time optimising conversion rate. At ${conversionRate}%+, marginal conversion improvement returns very little. The growth multiplier is volume, not efficiency.`;
     },
 
     getActions(inputs) {
@@ -476,23 +486,23 @@ const DIAGNOSIS = {
       const { conversionRate, trials, dealSize, activationRate, salesAssistedPct } = inputs;
       const annualMRR = usd(metrics.mrr * 12);
       const salesLine = salesAssistedPct != null && salesAssistedPct > 40
-        ? ` One structural caveat: ${salesAssistedPct}% sales assist means a meaningful share of your conversion efficiency is sales-driven. At scale, this becomes a capacity constraint. The self-serve infrastructure that should underpin your PLG motion likely hasn\'t been prioritised because sales has been compensating — and that gap compounds as you grow.`
+        ? ` Structural risk: ${salesAssistedPct}% sales assist means a significant share of your conversion efficiency is sales-driven. At scale, that becomes a headcount ceiling. The self-serve infrastructure that should underpin this motion hasn't been built because sales has been compensating — and that gap compounds.`
         : '';
       const activationLine = activationRate != null && activationRate < 45
-        ? ` Your activation rate of ${activationRate}% is the main remaining efficiency gap — lifting it is your highest-ROI conversion lever and doesn\'t require additional acquisition spend to show returns.`
+        ? ` Remaining efficiency gap: ${activationRate}% activation rate — lifting this is your highest-ROI conversion lever and requires no additional acquisition spend.`
         : '';
-      return `${conversionRate}% conversion across ${trials.toLocaleString()} monthly trials is a strong PLG foundation — implying ~${annualMRR} in annualised new-customer MRR.${activationLine}${salesLine} What this means: the funnel is working. Your growth priorities have shifted. The three risks that compound from here are conversion dilution (as you scale into broader audiences, blended conversion quietly declines), under-investment in expansion revenue relative to new ARR, and CAC creep as you exhaust efficient acquisition channels. The work has changed from building a funnel that converts to protecting one that already does — while finding the next compounding lever.`;
+      return `${conversionRate}% conversion across ${trials.toLocaleString()} monthly trials is a strong PLG foundation — ~${annualMRR} in annualised new-customer MRR.${activationLine}${salesLine} So what: the funnel works. Your priorities have shifted. The three risks that compound from here: (1) conversion dilution as you scale into broader audiences — blended conversion declines quietly without cohort-level tracking; (2) under-investment in expansion relative to new ARR — most companies at this stage leave 30–40% of achievable growth on the table here; (3) CAC creep as efficient acquisition channels saturate. The work has changed from building a funnel to protecting one.`;
     },
 
     getRecommendation(inputs) {
       const { activationRate, salesAssistedPct } = inputs;
       if (salesAssistedPct != null && salesAssistedPct > 40) {
-        return 'Protect your conversion rate as you scale by building self-serve conversion infrastructure now — before sales capacity becomes your growth ceiling. What to avoid: scaling acquisition or headcount before the self-serve path exists. You\'ll scale costs and complexity faster than revenue.';
+        return `Build self-serve conversion infrastructure now, before sales capacity becomes your growth ceiling. Do not scale acquisition or headcount before the self-serve path exists. You will scale costs and complexity faster than revenue.`;
       }
       if (activationRate != null && activationRate < 45) {
-        return 'Close the activation gap to capture remaining conversion upside, then shift investment toward retention and expansion — both will outperform new ARR acquisition at your scale. What to avoid: pouring incremental budget into acquisition before fixing activation. You\'re leaving compounding gains on the table.';
+        return `Close the activation gap first, then shift investment toward retention and expansion. Do not pour incremental budget into acquisition before fixing activation — you are leaving compounding conversion gains on the table that cost nothing to capture.`;
       }
-      return 'Shift investment toward retention and expansion revenue — at your conversion efficiency, NRR and LTV optimisation will generate more growth per dollar than further acquisition investment. What to avoid: pursuing growth through discounting or promotional pricing. It compresses LTV, attracts price-sensitive buyers who churn faster, and obscures your real growth health.';
+      return `Shift investment toward retention and expansion revenue — NRR and LTV optimisation will generate more growth per dollar than further acquisition at your conversion rate. Do not pursue growth through discounting or promotional pricing. It compresses LTV, attracts price-sensitive buyers who churn faster, and masks real growth health in the reporting.`;
     },
 
     getActions(inputs, metrics) {

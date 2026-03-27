@@ -7,7 +7,9 @@
       "Bash(--check /Users/saranshsharma/my-first-project/plg-decision-tool/js/logic.js)",
       "Bash(/opt/homebrew/bin/node --check /Users/saranshsharma/my-first-project/plg-decision-tool/js/logic.js)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(grep -n '\\\\${conversionRate}\\\\|\\\\${activationRate}\\\\|\\\\${trials}\\\\|\\\\${dealSize}' /Users/saranshsharma/my-first-project/plg-decision-tool/js/logic.js)",
+      "Bash(git push:*)"
     ]
   }
 }
