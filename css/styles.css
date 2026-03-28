@@ -116,6 +116,13 @@ input[type="number"]::-webkit-outer-spin-button { display: none; }
   color: var(--text-inv);
 }
 
+.header-tagline {
+  font-size: 0.75rem;
+  color: var(--text-inv-dim);
+  margin-top: 3px;
+  opacity: 0.6;
+}
+
 .header-sub {
   font-size: 0.875rem;
   color: var(--text-inv-dim);
