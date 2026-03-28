@@ -54,6 +54,7 @@ const out = {
 Object.values(inp).forEach((el) => el.addEventListener('input', update));
 
 out.btnCopy.addEventListener('click', async () => {
+  plausible('Copy Summary');
   const inputs = readInputs();
   if (!inputs) return;
   const metrics   = computeMetrics(inputs);
@@ -177,6 +178,7 @@ function renderMissedRevenue({ plus5, plus10 }) {
 // ── Visibility ─────────────────────────────────────────────────────────────────
 
 function showResults() {
+  if (out.results.hidden) plausible('Results Generated');
   out.emptyState.hidden = true;
   out.results.hidden = false;
 }
